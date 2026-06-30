@@ -5,21 +5,26 @@ on:
 
 jobs:
   get-alf:
-    name: Generate Unity .alf file
+    name: Generate .alf via Unity Docker
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Generate Unity activation file
+        run: |
+          # Puxa imagem oficial do Unity para o editor 2022.3
+          docker pull unityci/editor:ubuntu-2022.3.60f1-base-3
 
-      - name: Request Unity activation file
-        id: get-activation-file
-        uses: game-ci/unity-request-activation-file@v2
-        with:
-          unityVersion: 2022.3.60f1
+          # Roda Unity em batch mode para gerar o .alf
+          docker run --rm \
+            -v "$PWD":/workspace \
+            unityci/editor:ubuntu-2022.3.60f1-base-3 \
+            bash -c "unity-editor -batchmode -nographics -createManualActivationFile -logfile /dev/stdout; cp /root/*.alf /workspace/ 2>/dev/null || cp *.alf /workspace/ 2>/dev/null || true"
+
+          ls -la *.alf 2>/dev/null && echo "ALF gerado com sucesso!" || echo "ALF não encontrado no diretório atual"
 
       - name: Upload .alf artifact
         uses: actions/upload-artifact@v4
         with:
-          name: unity-activation-file
-          path: ${{ steps.get-activation-file.outputs.filePath }}
+          name: Unity_activation_file
+          path: "*.alf"
+          if-no-files-found: error
           retention-days: 3
