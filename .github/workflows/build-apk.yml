@@ -3,13 +3,7 @@ name: Build Android APK
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
-
-env:
-  UNITY_VERSION: 2022.3.60f1
-  PROJECT_PATH: .
 
 jobs:
   build-android:
@@ -18,84 +12,40 @@ jobs:
     timeout-minutes: 90
 
     steps:
-      # ── Checkout ────────────────────────────────────────────────────────────
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          lfs: true
 
-      - name: Git LFS pull
-        run: git lfs pull
-
-      # ── Cache Library ────────────────────────────────────────────────────────
       - name: Cache Unity Library
         uses: actions/cache@v4
         with:
           path: Library
           key: Library-Android-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
-          restore-keys: |
-            Library-Android-
-            Library-
+          restore-keys: Library-Android-
 
-      # ── Unity Build ──────────────────────────────────────────────────────────
       - name: Build project (Android)
         uses: game-ci/unity-builder@v4
         env:
-          UNITY_LICENSE:  ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL:    ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_LICENSE:  ${{ secrets.UNITY_LICENSE }}
         with:
-          unityVersion:       ${{ env.UNITY_VERSION }}
+          unityVersion:       2022.3.60f1
           targetPlatform:     Android
-          projectPath:        ${{ env.PROJECT_PATH }}
+          projectPath:        .
           buildName:          pita-game
           buildsPath:         builds
           androidExportType:  androidPackage
-          androidKeystoreName: pitagame.keystore
-          androidKeystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          androidKeystorePass:   ${{ secrets.ANDROID_KEYSTORE_PASS }}
-          androidKeyaliasName:   ${{ secrets.ANDROID_KEYALIAS_NAME }}
-          androidKeyaliasPass:   ${{ secrets.ANDROID_KEYALIAS_PASS }}
 
-      # ── Renomeia APK ─────────────────────────────────────────────────────────
-      - name: Rename APK with version
-        run: |
-          APK_FILE=$(find builds/Android -name "*.apk" | head -1)
-          VERSION=$(date +"%Y%m%d-%H%M")
-          NEW_NAME="pita-game-v${VERSION}.apk"
-          mv "$APK_FILE" "builds/Android/$NEW_NAME"
-          echo "APK_PATH=builds/Android/$NEW_NAME" >> $GITHUB_ENV
-          echo "APK_NAME=$NEW_NAME" >> $GITHUB_ENV
-
-      # ── Upload APK como Artifact ─────────────────────────────────────────────
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: pita-game-apk
           path: builds/Android/*.apk
           retention-days: 30
 
-      # ── Release automática na tag ─────────────────────────────────────────────
-      - name: Create GitHub Release (on tag)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: builds/Android/*.apk
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # ── Notificação no Summary ─────────────────────────────────────────────────
-      - name: Job summary
+      - name: Job Summary
         run: |
-          echo "## ✅ Build concluído!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Campo | Valor |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| APK | \`${{ env.APK_NAME }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Unity | ${{ env.UNITY_VERSION }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Plataforma | Android |" >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Baixe o APK em **Actions → Artifacts → pita-game-apk**" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ APK Gerado!" >> $GITHUB_STEP_SUMMARY
+          echo "Baixe em **Actions → Artifacts → pita-game-apk**" >> $GITHUB_STEP_SUMMARY
