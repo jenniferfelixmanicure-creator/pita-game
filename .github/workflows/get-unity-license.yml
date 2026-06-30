@@ -1,0 +1,21 @@
+name: Get Unity License (.alf)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  get-alf:
+    name: Generate Unity Activation File
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request Unity activation file
+        uses: game-ci/unity-request-activation-file@v4
+        with:
+          unityVersion: 2022.3.60f1
+
+      - name: Upload .alf as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-activation-file
+          path: ./*.alf
+          retention-days: 1
